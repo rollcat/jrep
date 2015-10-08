@@ -1,0 +1,93 @@
+#!/usr/bin/env python2.7
+
+from __future__ import print_function
+
+import argparse
+import json
+import sys
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+
+def linify(o):
+    simple_types = {str, unicode, int, long, float, bool, type(None)}
+    linify_complex = {
+        list: lambda oo: "\n".join(str(x) for x in oo
+                                   if type(x) in simple_types),
+        dict: lambda oo: "\n".join(oo.keys()),
+    }
+    linifier = linify_complex.get(type(o), str)
+    return linifier(o)
+
+
+formats = {
+    "json":   json.dumps,
+    "pretty": lambda o: json.dumps(o, indent=4),
+    "lines":  linify,
+}
+
+loaders = {
+    "json": json.load,
+    "eval": lambda fd: eval(fd.read()),
+}
+
+
+if yaml:
+    formats["yaml"] = yaml.dump
+    loaders["yaml"] = yaml.load
+
+
+argparser = argparse.ArgumentParser()
+argparser.add_argument("--format", help="Output format",
+                       choices=formats.keys(), default="json")
+argparser.add_argument("--loader", help="Input format",
+                       choices=loaders.keys(),
+                       default="yaml" if yaml else "json")
+argparser.add_argument("keys", default=[], nargs="*")
+
+
+def main():
+    args = argparser.parse_args()
+
+    load = loaders[args.loader]
+
+    try:
+        data = load(sys.stdin)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        exit(2)
+
+    for key in args.keys:
+        if key.startswith("+"):
+            if key == "+keys":
+                try:
+                    data = data.keys()
+                except Exception as e:
+                    print(repr(e), file=sys.stderr)
+                    exit(1)
+            else:
+                print("Unknown function: {}".format(key), file=sys.stderr)
+                exit(2)
+        else:
+            try:
+                key = int(key)
+            except:
+                pass
+            try:
+                data = data[key]
+            except LookupError as e:
+                print("Unknown key: {}".format(e), file=sys.stderr)
+                exit(1)
+
+    cerealize = formats[args.format]
+    s = cerealize(data)
+    assert isinstance(s, basestring), type(s)
+    sys.stdout.write(s)
+    exit(0)
+
+
+if __name__ == "__main__":
+    main()
