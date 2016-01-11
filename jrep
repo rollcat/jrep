@@ -18,14 +18,27 @@ except ImportError:
     import configparser
 
 
+simple_types = set([str, unicode, int, long, float, bool, type(None)])
+linify_complex = {
+    list: lambda oo: "\n".join(str(x) for x in oo
+                               if type(x) in simple_types) + "\n",
+    dict: lambda oo: "\n".join(oo.keys()) + "\n",
+}
+keyval_complex = {
+    list: lambda oo: "\n".join("%s=%s" % (i, str(x)) for i, x in enumerate(oo)
+                               if type(x) in simple_types) + "\n",
+    dict: lambda oo: "\n".join("%s=%s" % (k, str(v)) for k, v in oo.items()
+                               if type(v) in simple_types) + "\n",
+}
+
+
 def linify(o):
-    simple_types = {str, unicode, int, long, float, bool, type(None)}
-    linify_complex = {
-        list: lambda oo: "\n".join(str(x) for x in oo
-                                   if type(x) in simple_types) + "\n",
-        dict: lambda oo: "\n".join(oo.keys()) + "\n",
-    }
     linifier = linify_complex.get(type(o), str)
+    return linifier(o)
+
+
+def keyval(o):
+    linifier = keyval_complex.get(type(o), str)
     return linifier(o)
 
 
@@ -41,6 +54,7 @@ formats = {
     "json":   json.dumps,
     "pretty": lambda o: json.dumps(o, indent=4),
     "lines":  linify,
+    "keyval": keyval,
 }
 
 loaders = {
