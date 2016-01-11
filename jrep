@@ -12,6 +12,12 @@ except ImportError:
     yaml = None
 
 
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
+
+
 def linify(o):
     simple_types = {str, unicode, int, long, float, bool, type(None)}
     linify_complex = {
@@ -23,6 +29,14 @@ def linify(o):
     return linifier(o)
 
 
+def read_ini(fd):
+    p = configparser.ConfigParser()
+    p.readfp(fd)
+    return dict([(section, dict([(k, v) for k, v in items.items()
+                                 if k != "__name__"]))
+                 for section, items in p._sections.items()])
+
+
 formats = {
     "json":   json.dumps,
     "pretty": lambda o: json.dumps(o, indent=4),
@@ -32,6 +46,7 @@ formats = {
 loaders = {
     "json": json.load,
     "eval": lambda fd: eval(fd.read()),
+    "ini":  read_ini,
 }
 
 
