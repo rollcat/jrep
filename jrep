@@ -22,8 +22,8 @@ def linify(o):
     simple_types = {str, unicode, int, long, float, bool, type(None)}
     linify_complex = {
         list: lambda oo: "\n".join(str(x) for x in oo
-                                   if type(x) in simple_types),
-        dict: lambda oo: "\n".join(oo.keys()),
+                                   if type(x) in simple_types) + "\n",
+        dict: lambda oo: "\n".join(oo.keys()) + "\n",
     }
     linifier = linify_complex.get(type(o), str)
     return linifier(o)
